@@ -1,19 +1,19 @@
-// Lucas Shepard, ljs83
 #include "HashTable.h"
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-typedef struct bucket {
-  Pair *entries;
-  int size;
-} Bucket;
+typedef struct node {
+  char *key;
+  void *data;
+  struct node *link;
+} Node;
 
 struct hashtable {
-  Bucket *table;
+  Node **table;
   int nEntries; // M
-  int nBuckets; // N
+  int size; // N
 };
 
 static long hash (char *s, long size) {
@@ -86,49 +86,60 @@ int main(int argc, char *argv[]) {
 }
 
 
-void dictCreate(Dict *d, int nBuckets) {
-  // initializes a hashtable with nBuckets buckets
+void dictCreate(Dict *d, int size) {
+  // initializes a hashtable with size slots for linked lists
   *d = malloc(sizeof(struct hashtable));
 
-  (*d)->table = (Bucket *) calloc(nBuckets, sizeof(Bucket));
+  (*d)->table = calloc(size, sizeof(Node *));
 
-  (*d)->nBuckets = nBuckets;
+  (*d)->size = size;
   (*d)->nEntries = 0;
 }
 
-void dictInsert(Dict *d, Pair entry) {
+void dictInsert(Dict *d, char *key, void *data) {
   // inserts t into the hash table, resolving collisions with sorted chaining, and resizing if
   // load average exceeds 8
 
-  Bucket *bucket = &(((*d)->table)[hash(entry.key, (*d)->nEntries)]);
-  if (bucket->entries == NULL) {
-    bucket->entries = malloc(sizeof(Pair));
-    bucket->entries[0] = entry;
-    bucket->size = 1;
+  Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
+
+  Node newEntry = (Node) {key, data, NULL};
+
+  if (*chain == NULL) {
+    *chain = malloc(sizeof(Node));
+    memcpy(*chain, &newEntry, sizeof(Node));
   }
   else {
-    bucket->size += 1;
-    bucket->entries = realloc(bucket->entries, (bucket->size)*sizeof(Pair));
-    bucket->entries[(bucket->size)-1] = entry;
+    Node *end = *chain;
+    for (Node *next = (*chain)->link; next != NULL; next = next->link) {
+      end = next;
+    }
+
+    end->link = malloc(sizeof(Node));
+    memcpy(end->link, &newEntry, sizeof(Node));
   }
+  // else {    // NEEDS TO CHANGE
+  //   list->size += 1;
+  //   list->entries = realloc(list->entries, (list->size)*sizeof(Pair));
+  //   list->entries[(list->size)-1] = entry;
+  // }
 
   (*d)->nEntries += 1;
 
   // if load avg (N/M) exceeds 8, resize
-  if ((*d)->nEntries > 8*(*d)->nBuckets) {
+  if ((*d)->nEntries > 8*(*d)->size) {
 
     Dict new = NULL;
-    dictCreate(&new, (*d)->nBuckets * 8);
+    dictCreate(&new, (*d)->size * 8);
     new->nEntries = (*d)->nEntries;
 
-    for (int i = 0; i < (*d)->nBuckets; ++i) {
-      Bucket currChain = (*d)->table[i];
+    for (int i = 0; i < (*d)->size; ++i) {
+      Node **currChain = &((*d)->table[i]);
 
-      if (currChain.entries != NULL) {
-        for (int j = 0; j < currChain.size; ++j) {
-          dictInsert(&new, currChain.entries[j]);
-        }
-        free(currChain.entries);
+      if (*currChain != NULL) {
+        // for (int j = 0; j < currChain.size; ++j) {   // NEEDS TO CHANGE
+        //   dictInsert(&new, currChain.entries[j]);
+        // }
+        free(*currChain);
       }
     }
 
@@ -139,11 +150,11 @@ void dictInsert(Dict *d, Pair entry) {
   }
 }
 
-void *dictLookup(Dict *d, char key[]) {
+void *dictLookup(Dict *d, char *key) {
   // returns Pair* if pos is in the hashtable, NULL otherwise
-  Bucket chainArr = ((*d)->table)[hash(key, (*d)->nBuckets)];
+  Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
 
-  if (chainArr.entries == NULL) {
+  if (*chain == NULL) {
     return NULL;
   }
 
