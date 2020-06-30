@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define MAX_LOAD_AVG 8
+
 typedef struct node {
   char *key;
   void *data;
@@ -12,8 +14,8 @@ typedef struct node {
 
 struct hashtable {
   Node **table;
-  int nEntries; // M
-  int size; // N
+  long nEntries; // M
+  long size; // N
 };
 
 static long hash (char *s, long size) {
@@ -42,39 +44,55 @@ static long hash (char *s, long size) {
 //     return strcmp(ia->pos, ib->pos);
 // }
 
+
 int main(int argc, char *argv[]) {
-//   Dict d = NULL;
 
-//   Pair t1 = {"hi", "no", 3};
-//   Pair t2 = {"aa", "yo", 3};
-//   Pair t3 = {"ab", "aye", 3};
-//   Pair t4 = {"ad", "a", 4};
-//   Pair t5 = {"ae", "a", 4};
-//   Pair t6 = {"af", "a", 4};
-//   Pair t7 = {"ag", "a", 4};
-//   Pair t8 = {"ah", "a", 4};
-//   Pair t9 = {"ai", "a", 4};
-//   dictCreate(&d, 1);
-//   dictInsert(&d, t1);
-//   dictInsert(&d, t2);
-//   dictInsert(&d, t3);
-//   dictInsert(&d, t4);
-//   dictInsert(&d, t5);
-//   dictInsert(&d, t6);
-//   dictInsert(&d, t7);
-//   dictInsert(&d, t8);
-//   dictInsert(&d, t9);
 
-//   printf("%d\n",dictLookup(&d, t1));
-//   printf("%d\n",dictLookup(&d, t2));
-//   printf("%d\n",dictLookup(&d, t3));
-//   printf("%d\n",dictLookup(&d, t4));
-//   printf("%d\n",dictLookup(&d, t5));
-//   printf("%d\n",dictLookup(&d, t6));
-//   printf("%d\n",dictLookup(&d, t7));
-//   printf("%d\n",dictLookup(&d, t8));
-//   printf("%d\n",dictLookup(&d, t9));
+  Dict d = NULL;
 
+  // Pair t1 = {"hi", "no", 3};
+  // Pair t2 = {"aa", "yo", 3};
+  // Pair t3 = {"ab", "aye", 3};
+  // Pair t4 = {"ad", "a", 4};
+  // Pair t5 = {"ae", "a", 4};
+  // Pair t6 = {"af", "a", 4};
+  // Pair t7 = {"ag", "a", 4};
+  // Pair t8 = {"ah", "a", 4};
+  // Pair t9 = {"ai", "a", 4};
+  dictCreate(&d, 1);
+  dictInsert(&d, "t1", "a");
+  dictInsert(&d, "t2", "b");
+  dictInsert(&d, "t3", "c");
+  dictInsert(&d, "t4", "d");
+  dictInsert(&d, "t5", "e");
+  // dictInsert(&d, t2);
+  // dictInsert(&d, t3);
+  // dictInsert(&d, t4);
+  // dictInsert(&d, t5);
+  // dictInsert(&d, t6);
+  // dictInsert(&d, t7);
+  // dictInsert(&d, t8);
+  // dictInsert(&d, t9);
+
+  printf("%s\n",(char *) dictLookup(&d, "t1"));
+  printf("%s\n",(char *) dictLookup(&d, "t2"));
+  printf("%s\n",(char *) dictLookup(&d, "t3"));
+  printf("%s\n",(char *) dictLookup(&d, "t4"));
+  printf("%s\n",(char *) dictLookup(&d, "t5"));
+  printf("%p\n", dictLookup(&d, "t6"));
+
+  // dictRemove(&d, "t3");
+  // printf("%s\n",(char *) dictLookup(&d, "t1"));
+  // printf("%s\n",(char *) dictLookup(&d, "t2"));
+  // printf("%p\n",(char *) dictLookup(&d, "t3"));
+  // printf("%s\n",(char *) dictLookup(&d, "t4"));
+  // printf("%s\n",(char *) dictLookup(&d, "t5"));
+  // printf("%p\n", dictLookup(&d, "t6"));
+  // printf("%d\n",dictLookup(&d, t7));
+  // printf("%d\n",dictLookup(&d, t8));
+  // printf("%d\n",dictLookup(&d, t9));
+
+dictDestroy(&d);
 //   // printf("%d\n", d->nEntries);
 
 //   // for (int i = 0; i < d->nEntries; i++) {
@@ -98,7 +116,7 @@ void dictCreate(Dict *d, int size) {
 
 void dictInsert(Dict *d, char *key, void *data) {
   // inserts t into the hashtable, resolving collisions with chaining, and resizing if
-  // load average exceeds 8
+  // load average exceeds MAX_LOAD_AVG
 
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
 
@@ -131,17 +149,15 @@ void dictInsert(Dict *d, char *key, void *data) {
 
   (*d)->nEntries += 1;
 
-  // if load avg (N/M) exceeds 8, resize
-  if ((*d)->nEntries > 8*((*d)->size)) {
+  // if load avg (N/M) exceeds MAX_LOAD_AVG, resize
+  if ((*d)->nEntries > MAX_LOAD_AVG*((*d)->size)) {
 
     Dict new = NULL;
-    dictCreate(&new, (*d)->size * 8);
+    dictCreate(&new, (*d)->size * MAX_LOAD_AVG);
     new->nEntries = (*d)->nEntries;
 
     for (int i = 0; i < (*d)->size; ++i) {
-      Node **currChain = &((*d)->table[i]);
-
-      for (Node *next = (*currChain); next != NULL; next = next->link) {
+      for (Node *next = (*d)->table[i]; next != NULL; next = next->link) {
         dictInsert(&new, next->key, next->data);
         free(next);
       }
@@ -156,9 +172,9 @@ void dictInsert(Dict *d, char *key, void *data) {
 
 void * dictLookup(Dict *d, char *key) {
   // returns data pointer if key is in the hashtable, NULL otherwise
-  Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
+  Node *chain = ((*d)->table)[hash(key, (*d)->size)];
 
-  for (Node *next = (*chain); next != NULL; next = next->link) {
+  for (Node *next = chain; next != NULL; next = next->link) {
       if (strcmp(next->key, key) == 0) {
         return next->data;
       }
@@ -168,16 +184,36 @@ void * dictLookup(Dict *d, char *key) {
 }
 
 
-// void dictRemove(Dict *d, char *key) {
-//   // removes key/value pair from hashtable
+void dictRemove(Dict *d, char *key) {
+  // removes node at key from hashtable
 
-//   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
+  Node *chain = ((*d)->table)[hash(key, (*d)->size)];
   
-//   for (Node *next = (*chain); next != NULL; next = next->link) {
-//       if (strcmp(next->key, key) == 0) {
-//         next->data = data;
-//         break;
-//       }
-//   }
+  for (Node *next = chain, *prev = next; next != NULL; prev = next, next = next->link) {
+      if (strcmp(next->key, key) == 0) {
+        prev->link = next->link;
+        break;
+      }
+  }
 
-// }
+  
+
+}
+
+void dictDestroy(Dict *d) {
+  // frees all nodes, the table of nodes, and the hashtable. Does not free keys nor data.
+  for (int i = 0; i < (*d)->size; ++i) {
+
+    Node *prev = (*d)->table[i];
+    if (prev != NULL) {
+      for (Node *next = ((*d)->table[i])->link; next != NULL; next = next->link) {
+        free(prev);
+        prev = next;
+      }
+      free(prev);
+    }
+  }
+
+  free((*d)->table);
+  free((*d));
+}
