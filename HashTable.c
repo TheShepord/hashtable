@@ -97,7 +97,7 @@ void dictCreate(Dict *d, int size) {
 }
 
 void dictInsert(Dict *d, char *key, void *data) {
-  // inserts t into the hash table, resolving collisions with sorted chaining, and resizing if
+  // inserts t into the hashtable, resolving collisions with chaining, and resizing if
   // load average exceeds 8
 
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
@@ -109,24 +109,30 @@ void dictInsert(Dict *d, char *key, void *data) {
     memcpy(*chain, &newEntry, sizeof(Node));
   }
   else {
-    Node *end = *chain;
-    for (Node *next = (*chain)->link; next != NULL; next = next->link) {
-      end = next;
+    Node *tail = NULL;
+
+    char replacedFlag = 0;
+    for (Node *next = (*chain); next != NULL; next = next->link) {
+      tail = next;
+
+      if (strcmp(next->key, key) == 0) {
+        // if key already exists, replace existing data with new data
+        next->data = data;
+        replacedFlag = 1;
+        break;
+      }
     }
 
-    end->link = malloc(sizeof(Node));
-    memcpy(end->link, &newEntry, sizeof(Node));
+    if (! replacedFlag) {
+      tail->link = malloc(sizeof(Node));
+      memcpy(tail->link, &newEntry, sizeof(Node));
+    }
   }
-  // else {    // NEEDS TO CHANGE
-  //   list->size += 1;
-  //   list->entries = realloc(list->entries, (list->size)*sizeof(Pair));
-  //   list->entries[(list->size)-1] = entry;
-  // }
 
   (*d)->nEntries += 1;
 
   // if load avg (N/M) exceeds 8, resize
-  if ((*d)->nEntries > 8*(*d)->size) {
+  if ((*d)->nEntries > 8*((*d)->size)) {
 
     Dict new = NULL;
     dictCreate(&new, (*d)->size * 8);
@@ -135,11 +141,9 @@ void dictInsert(Dict *d, char *key, void *data) {
     for (int i = 0; i < (*d)->size; ++i) {
       Node **currChain = &((*d)->table[i]);
 
-      if (*currChain != NULL) {
-        // for (int j = 0; j < currChain.size; ++j) {   // NEEDS TO CHANGE
-        //   dictInsert(&new, currChain.entries[j]);
-        // }
-        free(*currChain);
+      for (Node *next = (*currChain); next != NULL; next = next->link) {
+        dictInsert(&new, next->key, next->data);
+        free(next);
       }
     }
 
@@ -150,34 +154,30 @@ void dictInsert(Dict *d, char *key, void *data) {
   }
 }
 
-void *dictLookup(Dict *d, char *key) {
-  // returns Pair* if pos is in the hashtable, NULL otherwise
+void * dictLookup(Dict *d, char *key) {
+  // returns data pointer if key is in the hashtable, NULL otherwise
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
 
-  if (*chain == NULL) {
-    return NULL;
+  for (Node *next = (*chain); next != NULL; next = next->link) {
+      if (strcmp(next->key, key) == 0) {
+        return next->data;
+      }
   }
 
-  // else {
-    // int l = 0;
-    // int h = chainArr.size-1;
-    // int m = l + (h-l)/2;
-    // int cmp;
-
-    // while (l <= h) {
-    //   m = l + (h-l)/2;
-    //   // printf("%d\n",m);
-    //   cmp = strcmp(key, chainArr.entries[m].pos);
-
-    //   if (cmp > 0) {  // ignore left half
-    //     l = m+1;
-    //   }
-    //   else if (cmp < 0) {  // ignore right half
-    //     h = m-1;
-    //   }
-    //   else {
-    //     return &chainArr.entries[m];
-    //   }
-    // }
-    // return NULL;
+  return NULL;
 }
+
+
+// void dictRemove(Dict *d, char *key) {
+//   // removes key/value pair from hashtable
+
+//   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
+  
+//   for (Node *next = (*chain); next != NULL; next = next->link) {
+//       if (strcmp(next->key, key) == 0) {
+//         next->data = data;
+//         break;
+//       }
+//   }
+
+// }
