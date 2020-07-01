@@ -13,32 +13,24 @@ typedef struct node {
 
 struct hashtable {
   Node **table;
-  long nEntries; // M
-  long size; // N
+  unsigned long nEntries; // M
+  unsigned long size; // N
 };
 
-static long hash (char *s, long size) {
-    unsigned long sum;
-    int shift;
-    const unsigned long prime = 3141592653589793239L;
+/* djb2 hashing algorithm, written by Dan Bernstein in comp.lang.c */
+unsigned long hash(unsigned char *str, unsigned long size) {
+  unsigned long hash = 5381;
+  int c;
 
-    for (sum = 0, shift = 0; *s; s++) {         // Compress string to long
-        sum ^= *s<<shift;
-        shift += 4;
-        if (shift >= 57)
-            shift -= 57;
-    }
-    sum += sum >> 33;                           // Condition the bits
-    sum *= prime;
-    sum += sum >> 33;
+  while (c = *str++)
+    hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
 
-    return (sum % size);                        // Reduce to [0,SIZE)
-    // return 0;
+  return hash;
 }
 
 /*    initializes a hashtable with 'size' slots for linked lists.
       higher size means more time before dictionary has to resize due to high load average*/
-void dictCreate(Dict *d, int size) {
+void dictCreate(Dict *d, unsigned long size) {
   
   *d = malloc(sizeof(struct hashtable));
 
