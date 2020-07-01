@@ -81,12 +81,14 @@ int main(int argc, char *argv[]) {
   printf("%s\n",(char *) dictLookup(&d, "t5"));
   printf("%p\n", dictLookup(&d, "t6"));
 
-  // dictRemove(&d, "t3");
+  dictRemove(&d, "t3");
+  dictRemove(&d, "t2");
+  dictRemove(&d, "t1");
   // printf("%s\n",(char *) dictLookup(&d, "t1"));
   // printf("%s\n",(char *) dictLookup(&d, "t2"));
   // printf("%p\n",(char *) dictLookup(&d, "t3"));
-  // printf("%s\n",(char *) dictLookup(&d, "t4"));
-  // printf("%s\n",(char *) dictLookup(&d, "t5"));
+  printf("%s\n",(char *) dictLookup(&d, "t4"));
+  printf("%s\n",(char *) dictLookup(&d, "t5"));
   // printf("%p\n", dictLookup(&d, "t6"));
   // printf("%d\n",dictLookup(&d, t7));
   // printf("%d\n",dictLookup(&d, t8));
@@ -103,9 +105,9 @@ dictDestroy(&d);
 //   exit(1);
 }
 
-
+/* initializes a hashtable with size slots for linked lists */
 void dictCreate(Dict *d, int size) {
-  // initializes a hashtable with size slots for linked lists
+  
   *d = malloc(sizeof(struct hashtable));
 
   (*d)->table = calloc(size, sizeof(Node *));
@@ -114,10 +116,9 @@ void dictCreate(Dict *d, int size) {
   (*d)->nEntries = 0;
 }
 
+/*    inserts t into the hashtable, resolving collisions with chaining, and resizing if
+      load average exceeds MAX_LOAD_AVG */
 void dictInsert(Dict *d, char *key, void *data) {
-  // inserts t into the hashtable, resolving collisions with chaining, and resizing if
-  // load average exceeds MAX_LOAD_AVG
-
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
 
   Node newEntry = (Node) {key, data, NULL};
@@ -170,8 +171,8 @@ void dictInsert(Dict *d, char *key, void *data) {
   }
 }
 
+/* returns data pointer if key is in the hashtable, NULL otherwise */
 void * dictLookup(Dict *d, char *key) {
-  // returns data pointer if key is in the hashtable, NULL otherwise
   Node *chain = ((*d)->table)[hash(key, (*d)->size)];
 
   for (Node *next = chain; next != NULL; next = next->link) {
@@ -183,25 +184,33 @@ void * dictLookup(Dict *d, char *key) {
   return NULL;
 }
 
-
-void dictRemove(Dict *d, char *key) {
-  // removes node at key from hashtable
-
-  Node *chain = ((*d)->table)[hash(key, (*d)->size)];
+/* removes node at key from hashtable, returning data pointer in case it still needs to be freed */
+void * dictRemove(Dict *d, char *key) {
+  Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
   
-  for (Node *next = chain, *prev = next; next != NULL; prev = next, next = next->link) {
+  for (Node *next = (*chain), *prev = NULL; next != NULL; prev = next, next = next->link) {
       if (strcmp(next->key, key) == 0) {
-        prev->link = next->link;
+        if (prev != NULL) {
+          prev->link = next->link;
+        }
+        else {
+          *chain = next->link;
+        }
+
+        void *data = next->data;
+        free(next);
+        
+        return data;
         break;
       }
   }
 
-  
-
+  return NULL;
 }
 
+/* frees all nodes, the table of nodes, and the hashtable. Does not free keys nor data. */
 void dictDestroy(Dict *d) {
-  // frees all nodes, the table of nodes, and the hashtable. Does not free keys nor data.
+
   for (int i = 0; i < (*d)->size; ++i) {
 
     Node *prev = (*d)->table[i];
@@ -217,3 +226,11 @@ void dictDestroy(Dict *d) {
   free((*d)->table);
   free((*d));
 }
+
+// void dictPrint(Dict *d) {
+//   for (int i = 0; i < (*d)->size; ++i) {
+//     for (Node *next = (*d)->table[i]; next != NULL; next = next->link) {
+//         printf("")
+//       }
+//     }
+// }
