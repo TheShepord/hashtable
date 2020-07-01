@@ -2,7 +2,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #define MAX_LOAD_AVG 8
 
@@ -37,75 +36,8 @@ static long hash (char *s, long size) {
     // return 0;
 }
 
-// int cstruct_cmp(const void *a, const void *b) {
-//   // comparison function for qsort, created with help from http://www.anyexample.com/programming/c/qsort__sorting_array_of_strings__integers_and_structs.xml
-//     Pair *ia = (Pair *)a;
-//     Pair *ib = (Pair *)b;
-//     return strcmp(ia->pos, ib->pos);
-// }
-
-
-int main(int argc, char *argv[]) {
-
-
-  Dict d = NULL;
-
-  // Pair t1 = {"hi", "no", 3};
-  // Pair t2 = {"aa", "yo", 3};
-  // Pair t3 = {"ab", "aye", 3};
-  // Pair t4 = {"ad", "a", 4};
-  // Pair t5 = {"ae", "a", 4};
-  // Pair t6 = {"af", "a", 4};
-  // Pair t7 = {"ag", "a", 4};
-  // Pair t8 = {"ah", "a", 4};
-  // Pair t9 = {"ai", "a", 4};
-  dictCreate(&d, 1);
-  dictInsert(&d, "t1", "a");
-  dictInsert(&d, "t2", "b");
-  dictInsert(&d, "t3", "c");
-  dictInsert(&d, "t4", "d");
-  dictInsert(&d, "t5", "e");
-  // dictInsert(&d, t2);
-  // dictInsert(&d, t3);
-  // dictInsert(&d, t4);
-  // dictInsert(&d, t5);
-  // dictInsert(&d, t6);
-  // dictInsert(&d, t7);
-  // dictInsert(&d, t8);
-  // dictInsert(&d, t9);
-
-  printf("%s\n",(char *) dictLookup(&d, "t1"));
-  printf("%s\n",(char *) dictLookup(&d, "t2"));
-  printf("%s\n",(char *) dictLookup(&d, "t3"));
-  printf("%s\n",(char *) dictLookup(&d, "t4"));
-  printf("%s\n",(char *) dictLookup(&d, "t5"));
-  printf("%p\n", dictLookup(&d, "t6"));
-
-  dictRemove(&d, "t3");
-  dictRemove(&d, "t2");
-  dictRemove(&d, "t1");
-  // printf("%s\n",(char *) dictLookup(&d, "t1"));
-  // printf("%s\n",(char *) dictLookup(&d, "t2"));
-  // printf("%p\n",(char *) dictLookup(&d, "t3"));
-  printf("%s\n",(char *) dictLookup(&d, "t4"));
-  printf("%s\n",(char *) dictLookup(&d, "t5"));
-  // printf("%p\n", dictLookup(&d, "t6"));
-  // printf("%d\n",dictLookup(&d, t7));
-  // printf("%d\n",dictLookup(&d, t8));
-  // printf("%d\n",dictLookup(&d, t9));
-
-dictDestroy(&d);
-//   // printf("%d\n", d->nEntries);
-
-//   // for (int i = 0; i < d->nEntries; i++) {
-//   //   Bucket currChain = d->table[i];
-//   //   printf("%d\n",currChain.size);
-//   // }
-
-//   exit(1);
-}
-
-/* initializes a hashtable with size slots for linked lists */
+/*    initializes a hashtable with 'size' slots for linked lists.
+      higher size means more time before dictionary has to resize due to high load average*/
 void dictCreate(Dict *d, int size) {
   
   *d = malloc(sizeof(struct hashtable));
@@ -117,7 +49,7 @@ void dictCreate(Dict *d, int size) {
 }
 
 /*    inserts t into the hashtable, resolving collisions with chaining, and resizing if
-      load average exceeds MAX_LOAD_AVG */
+      load average (= size/nEntries) exceeds MAX_LOAD_AVG */
 void dictInsert(Dict *d, char *key, void *data) {
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
 
@@ -184,7 +116,7 @@ void * dictLookup(Dict *d, char *key) {
   return NULL;
 }
 
-/* removes node at key from hashtable, returning data pointer in case it still needs to be freed */
+/* removes node at 'key' from hashtable, returning data pointer in case it still needs to be freed */
 void * dictRemove(Dict *d, char *key) {
   Node **chain = &(((*d)->table)[hash(key, (*d)->size)]);
   
@@ -199,38 +131,111 @@ void * dictRemove(Dict *d, char *key) {
 
         void *data = next->data;
         free(next);
-        
+        (*d)->nEntries = (*d)->nEntries - 1;
         return data;
-        break;
       }
   }
 
   return NULL;
 }
 
-/* frees all nodes, the table of nodes, and the hashtable. Does not free keys nor data. */
-void dictDestroy(Dict *d) {
-
+/* frees all nodes. Does not free keys nor data. */
+void dictClear(Dict *d) {
   for (int i = 0; i < (*d)->size; ++i) {
+    Node **chain = &((*d)->table[i]);
+    
+    if (*chain != NULL) {
+      Node *prev = *chain;
 
-    Node *prev = (*d)->table[i];
-    if (prev != NULL) {
       for (Node *next = ((*d)->table[i])->link; next != NULL; next = next->link) {
+        prev = NULL;
         free(prev);
         prev = next;
       }
       free(prev);
+
+      *chain = NULL;
     }
   }
+}
+
+/* returns array of all keys inside the hashtable */
+char **dictKeys(Dict *d) {
+
+  char **dictKeys = malloc(((*d)->nEntries)*sizeof(char *));
+  long j = 0;
+
+  for (int i = 0; i < (*d)->size; ++i) {
+      for (Node *next = (*d)->table[i]; next != NULL; next = next->link) {
+        dictKeys[j] = next->key;
+        ++j;
+      }
+    }
+  
+  return dictKeys;
+}
+
+/* Returns nEntries, the number of items inserted into the array */
+long dictLen(Dict *d) {
+  return (*d)->nEntries;
+}
+
+
+/* frees all nodes, the table of nodes, and the hashtable. Does not free keys nor data. */
+void dictDestroy(Dict *d) {
+
+  dictClear(d);
 
   free((*d)->table);
   free((*d));
 }
 
-// void dictPrint(Dict *d) {
-//   for (int i = 0; i < (*d)->size; ++i) {
-//     for (Node *next = (*d)->table[i]; next != NULL; next = next->link) {
-//         printf("")
-//       }
-//     }
-// }
+
+#ifdef TEST_HASHTABLE
+#include <stdio.h>
+
+/* Main function for testing purposes */
+int main(int argc, char *argv[]) {
+
+  Dict d = NULL;
+
+  dictCreate(&d, 5);
+  dictInsert(&d, "t1", "a");
+  dictInsert(&d, "t2", "b");
+  dictInsert(&d, "t3", "c");
+  dictInsert(&d, "t4", "d");
+  dictInsert(&d, "t5", "e");
+
+  printf("%s\n",(char *) dictLookup(&d, "t1"));
+  printf("%s\n",(char *) dictLookup(&d, "t2"));
+  printf("%s\n",(char *) dictLookup(&d, "t3"));
+  printf("%s\n",(char *) dictLookup(&d, "t4"));
+  printf("%s\n",(char *) dictLookup(&d, "t5"));
+  printf("%p\n", dictLookup(&d, "t6"));
+
+  char **foo = dictKeys(&d);
+  for (long i = 0, len = dictLen(&d); i < len; ++i) {
+    printf("%s\n", foo[i]);
+  }
+  free(foo);
+  
+  dictRemove(&d, "t3");
+  dictRemove(&d, "t2");
+  dictRemove(&d, "t1");
+  printf("------------------\n");
+
+  char **bar = dictKeys(&d);
+  for (long i = 0, len = dictLen(&d); i < len; ++i) {
+    printf("%s\n", bar[i]);
+  }
+  free(bar);
+
+  dictClear(&d);
+
+  dictInsert(&d, "t1", "a");
+  dictInsert(&d, "t2", "b");
+
+  dictDestroy(&d);
+
+}
+#endif
