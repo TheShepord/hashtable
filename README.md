@@ -1,5 +1,5 @@
 # hashtable
-[![Github license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](https://github.com/TheShepord/hashtable/blob/master/LICENSE)]
+[![Github license](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square)](https://github.com/TheShepord/hashtable/blob/master/LICENSE)
 
 `Hashtable` is a feature-complete ADT using separate chaining with linked lists, written in pure C.
 
