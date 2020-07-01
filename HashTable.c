@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_LOAD_AVG 8
+#define MAX_LOAD_AVG 8  // how large size/nEntries is allowed to get before performing a resize
 
 typedef struct node {
   char *key;
