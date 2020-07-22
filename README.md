@@ -46,6 +46,8 @@ int main (int argc, char *argv[]) {
 }
 ```
 
-## License
+## About
 
-This project is released under the [MIT License](https://github.com/TheShepord/hashtable/blob/master/LICENSE).
+*License*: This project is released under the [MIT License](https://github.com/TheShepord/hashtable/blob/master/LICENSE).
+
+*References*: [Aspnes, James. "5.4 Hash tables." *Notes on Data Structures and Programming Techniques*, CPSC 223, Spring 2018.](https://www.cs.yale.edu/homes/aspnes/classes/223/notes.html#hashTables)
